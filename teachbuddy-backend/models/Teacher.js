@@ -29,8 +29,8 @@ const teacherSchema = new mongoose.Schema({
     required: true 
   },
   
- // ==========================================
-  // NEW: ROLE-BASED ACCESS CONTROL (RBAC) FIELDS
+  // ==========================================
+  // ROLE-BASED ACCESS CONTROL (RBAC) FIELDS
   // ==========================================
   
   // 1. The class they officially manage (e.g., "8A"). 
@@ -42,12 +42,19 @@ const teacherSchema = new mongoose.Schema({
   
   // 2. An array of classes they teach subjects for (e.g., ["8A", "8B", "9A"]).
   // They can view attendance/registers for these classes, but not edit them.
-  classesTaught: [{ 
-    type: String 
-  }]
+  classesTaught: { 
+    type: [String],
+    default: [] 
+  },
+
+  // 3. Cloudinary URL for their uploaded timetable image
+  timetableUrl: {
+    type: String,
+    default: ""
+  }
 }, 
 // The timestamps option automatically creates 'createdAt' and 'updatedAt' fields for us!
 { timestamps: true });
 
-// We compile the Schema into a "Model" and export it so we can use it in our routes to create, read, update, or delete Teachers.
+// We compile the Schema into a "Model" and export it so we can use it in our routes
 module.exports = mongoose.model('Teacher', teacherSchema);

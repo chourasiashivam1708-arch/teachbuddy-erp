@@ -36,6 +36,10 @@ router.post('/register', async (req, res) => {
   }
 });
 
+
+
+
+
 // 2. ROUTE: POST /api/auth/login (Verify credentials and generate JWT badge)
 router.post('/login', async (req, res) => {
   try {

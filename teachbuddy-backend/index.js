@@ -50,7 +50,8 @@ const testRoutes = require('./routes/testRoutes');
 app.use('/api/teachers', authMiddleware, teacherRoutes); 
 app.use('/api/students', authMiddleware, studentRoutes); 
 app.use('/api/tests', authMiddleware, testRoutes);
-
+// Add this line in your index.js
+app.use('/api/attendance', require('./routes/attendanceRoutes'));
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

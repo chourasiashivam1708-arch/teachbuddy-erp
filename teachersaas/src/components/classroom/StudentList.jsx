@@ -104,9 +104,34 @@ export default function StudentList({ students, setStudents, initialSearch }) {
           body: JSON.stringify({ students: formattedStudents })
         });
 
-        if (response.ok) {
+       if (response.ok) {
           alert(`Success! Class ${currentUser.classTeacherOf} has been replaced.`);
-          setShowUploadModal(false); setUploadFile(null); window.location.reload(); 
+          
+          // 1. Close the modal and clear the file
+          setShowUploadModal(false); 
+          setUploadFile(null); 
+
+          // 2. Fetch the fresh list from the database instantly!
+          try {
+            const refreshResponse = await fetch('http://localhost:5000/api/students', {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('teachbuddy_token')}`
+              }
+            });
+            const allStudents = await refreshResponse.json();
+            
+            // 3. Filter them exactly like we did in Classroom.jsx
+            const myStudents = allStudents.filter(student => 
+              currentUser?.classesTaught?.includes(student.grade || student.class || student.className)
+            );
+            
+            // 4. Update React's memory without reloading the page!
+            setStudents(myStudents); 
+            
+          } catch (refreshError) {
+            console.error("Failed to refresh the UI:", refreshError);
+          }
+
         } else {
           alert("Failed to save to the database.");
         }

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { User, Moon, Bell, Shield, LogOut, ChevronRight, GraduationCap } from 'lucide-react';
+import { Moon, Bell, Shield, LogOut, ChevronRight, GraduationCap } from 'lucide-react';
 
-export default function ProfileMain({ setActiveView }) {
+// 1. ADDED PROPS: We now receive currentUser and logout from the Traffic Cop
+export default function ProfileMain({ setActiveView, currentUser, logout }) {
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
 
-  const handleLogout = () => {
-    // In Phase 2, this will clear the JWT token and redirect to login
-    alert("Logging out of TeachBuddy...");
+  // Auto-generate initials (e.g., "Parvinder Kaur" -> "PK")
+  const getInitials = (name) => {
+    if (!name) return 'U'; // 'U' for User if no name exists
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
   return (
@@ -18,12 +20,15 @@ export default function ProfileMain({ setActiveView }) {
         
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-2xl shadow-md text-white flex items-center gap-4">
           <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center border border-white/20 backdrop-blur-sm">
-            <span className="text-2xl font-bold">SC</span>
+            {/* 2. DYNAMIC INITIALS */}
+            <span className="text-2xl font-bold">{getInitials(currentUser?.name)}</span>
           </div>
           <div className="flex-1">
-            <h2 className="text-lg font-bold">Shivam Chourasia</h2>
+            {/* 3. DYNAMIC NAME */}
+            <h2 className="text-lg font-bold">{currentUser?.name || 'Teacher'}</h2>
             <p className="text-slate-300 text-sm font-medium flex items-center gap-1.5 mt-0.5">
-              <GraduationCap className="w-4 h-4" /> Senior Math Teacher
+              {/* 4. DYNAMIC ROLE */}
+              <GraduationCap className="w-4 h-4" /> Class {currentUser?.classTeacherOf || 'Unassigned'} Teacher
             </p>
           </div>
         </div>
@@ -32,7 +37,6 @@ export default function ProfileMain({ setActiveView }) {
       <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Workspace</h2>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6">
         
-        {/* NEW: Navigates to Class Management */}
         <button onClick={() => setActiveView('classes')} className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -43,7 +47,6 @@ export default function ProfileMain({ setActiveView }) {
           <ChevronRight className="w-5 h-5 text-slate-300" />
         </button>
 
-        {/* NEW: Navigates to Account Security */}
         <button onClick={() => setActiveView('security')} className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -91,7 +94,8 @@ export default function ProfileMain({ setActiveView }) {
 
       </div>
 
-      <button onClick={handleLogout} className="w-full bg-white border border-rose-200 text-rose-600 p-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 hover:bg-rose-50 transition-colors font-bold text-lg">
+      {/* 5. WIRED LOGOUT BUTTON */}
+      <button onClick={logout} className="w-full bg-white border border-rose-200 text-rose-600 p-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 hover:bg-rose-50 transition-colors font-bold text-lg">
         <LogOut className="w-5 h-5 stroke-[2.5px]" />
         Sign Out
       </button>

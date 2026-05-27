@@ -1,26 +1,22 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-
-// 1. We must import the AuthProvider alongside useAuth!
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 import Login from './components/auth/Login';
 import BottomNav from './components/BottomNav';
 
-// Import YOUR 5 Pillar Pages exactly as you originally had them!
 import HomeDashboard from './pages/HomeDashboard';
 import Classroom from './pages/Classroom';
 import Teaching from './pages/Teaching';
 import Insights from './pages/Insights';
 import Profile from './pages/Profile';
 
-// ==========================================
-// THE INNER APP (Checks security and loads routes)
-// ==========================================
+// 1. The inner app that actually checks the security badge
 function MainContent() {
   const { currentUser, loading } = useAuth();
-
+  // ADD THIS LINE:
+  console.log("Loading Status:", loading, "Current User:", currentUser);
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -49,9 +45,7 @@ function MainContent() {
   );
 }
 
-// ==========================================
-// THE OUTER APP (Provides the Auth Vault)
-// ==========================================
+// 2. The outer app that wraps everything in the Vault
 export default function App() {
   return (
     <AuthProvider>

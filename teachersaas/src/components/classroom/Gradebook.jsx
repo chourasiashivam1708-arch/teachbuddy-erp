@@ -13,7 +13,6 @@ export default function Gradebook({ students }) {
   const [testTitle, setTestTitle] = useState('');
   const [maxMarks, setMaxMarks] = useState('');
 
-  // NEW: State to handle the currently selected test for grading
   const [activeTest, setActiveTest] = useState(null);
   const [draftScores, setDraftScores] = useState([]);
 
@@ -33,7 +32,6 @@ export default function Gradebook({ students }) {
         console.error("Error fetching tests:", error);
       }
     };
-    // Close any open test when switching classes
     setActiveTest(null); 
     fetchTests();
   }, [activeClass]);
@@ -61,21 +59,37 @@ export default function Gradebook({ students }) {
     }
   };
 
-  // OPEN GRADING VIEW
+  // ==========================================
+  // 🚀 BULLETPROOF GRADING VIEW LOGIC 🚀
+  // ==========================================
   const openGradingView = (test) => {
     setActiveTest(test);
-    // Create a local draft of the scores so the teacher can edit them before saving
-    setDraftScores(test.scores);
+    
+    // 1. Get all CURRENT students for this specific class using our safe filter
+    const classStudents = students.filter(s => 
+      s.grade === activeClass || s.class === activeClass || s.className === activeClass
+    );
+
+    // 2. Build the grading sheet dynamically! 
+    // If they already have a saved score in the database, keep it. 
+    // If they are a newly uploaded student, set their score to null.
+    const dynamicScores = classStudents.map(student => {
+      const existingRecord = test.scores?.find(score => score.studentId === student._id);
+      return {
+        studentId: student._id,
+        score: existingRecord && existingRecord.score !== null ? existingRecord.score : null
+      };
+    });
+
+    setDraftScores(dynamicScores);
   };
 
-  // HANDLE NUMBER INPUT
   const handleScoreChange = (studentId, newScore) => {
     setDraftScores(prev => prev.map(s => 
       s.studentId === studentId ? { ...s, score: newScore === '' ? null : Number(newScore) } : s
     ));
   };
 
-  // SAVE GRADES TO DATABASE
   const handleSaveGrades = async () => {
     try {
       const response = await fetch(`http://localhost:5000/api/tests/${activeTest._id}/scores`, {
@@ -88,10 +102,9 @@ export default function Gradebook({ students }) {
       });
       if (response.ok) {
         const updatedTest = await response.json();
-        // Update the test in our main list so the badges refresh
         setTests(tests.map(t => t._id === updatedTest._id ? updatedTest : t));
         alert("Grades successfully saved!");
-        setActiveTest(null); // Return to dashboard
+        setActiveTest(null); 
       }
     } catch (error) {
       alert("Failed to save grades.");
@@ -107,13 +120,9 @@ export default function Gradebook({ students }) {
     return 'pending';
   };
 
-  // ==========================================
-  // VIEW 2: THE GRADING INTERFACE
-  // ==========================================
   if (activeTest) {
     return (
       <div className="animate-in slide-in-from-right-4 duration-300">
-        {/* Sticky Header for Grading */}
         <div className="sticky top-0 z-30 bg-[#f8fafc]/95 backdrop-blur-md pt-2 pb-3 mb-4 -mx-2 px-2 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => setActiveTest(null)} className="p-2 bg-white rounded-full shadow-sm text-slate-500 hover:text-blue-600">
@@ -129,12 +138,10 @@ export default function Gradebook({ students }) {
           </button>
         </div>
 
-        {/* Student List with Grade Inputs */}
         <div className="space-y-3 pb-20">
           {draftScores.map((scoreEntry) => {
-            // Find the student's name and roll number from the global students list
             const studentInfo = students.find(s => s._id === scoreEntry.studentId);
-            if (!studentInfo) return null; // Safety check
+            if (!studentInfo) return null; 
 
             return (
               <div key={scoreEntry.studentId} className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between transition-all focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-50">
@@ -145,7 +152,6 @@ export default function Gradebook({ students }) {
                   <h3 className="font-bold text-slate-800">{studentInfo.name}</h3>
                 </div>
                 
-                {/* The Grade Input Field */}
                 <div className="flex items-center gap-2">
                   <input 
                     type="number" 
@@ -166,13 +172,8 @@ export default function Gradebook({ students }) {
     );
   }
 
-  // ==========================================
-  // VIEW 1: THE MAIN DASHBOARD
-  // ==========================================
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-      
-      {/* STICKY HEADER */}
       <div className="sticky top-0 z-30 bg-[#f8fafc]/95 backdrop-blur-md pt-2 pb-3 mb-4 -mx-2 px-2 rounded-b-xl border-b border-transparent flex justify-between items-center">
         <div className="flex gap-2 overflow-x-auto hide-scrollbar flex-1">
           {availableClasses.map((cls) => (
@@ -232,7 +233,6 @@ export default function Gradebook({ students }) {
         )}
       </div>
 
-      {/* NEW TEST MODAL */}
       {showNewTestModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm rounded-3xl shadow-xl p-5 animate-in zoom-in-95 duration-200">

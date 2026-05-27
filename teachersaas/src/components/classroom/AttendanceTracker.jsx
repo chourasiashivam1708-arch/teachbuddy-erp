@@ -5,20 +5,50 @@ import { useAuth } from '../../context/AuthContext';
 export default function AttendanceTracker({ students }) {
   const { currentUser } = useAuth(); 
   
-  const [activeClass, setActiveClass] = useState('8A');
+  // 1. DYNAMIC CLASSES: Grab the array from the Vault
+  const myClasses = currentUser?.classesTaught || [];
+  
+  // 2. DYNAMIC INITIAL STATE: Default to the very first class they teach
+  const [activeClass, setActiveClass] = useState(myClasses[0] || '');
   const [attendanceList, setAttendanceList] = useState([]);
 
-  const isClassTeacher = currentUser.classTeacherOf === activeClass;
+  const isClassTeacher = currentUser?.classTeacherOf === activeClass;
 
+  // Tiny UI Upgrade: Automatically get today's date formatted nicely (e.g., "27 May")
+  const todayDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+  // 3. THE NEW PERSISTENT ATTENDANCE LOGIC
   useEffect(() => {
-    const classStudents = students.filter(student => student.grade === activeClass);
-    
-    const initializedStudents = classStudents.map(student => ({
-      ...student,
-      currentStatus: 'Present' 
-    }));
-    
-    setAttendanceList(initializedStudents);
+    const fetchTodayAttendance = async () => {
+      try {
+        // Ask the backend if attendance exists for this class today
+        const response = await fetch(`http://localhost:5000/api/attendance/${activeClass}/today`, {
+           headers: { 'Authorization': `Bearer ${localStorage.getItem('teachbuddy_token')}` }
+        });
+
+        if (response.ok) {
+          // If YES, load the saved data!
+          const savedData = await response.json();
+          setAttendanceList(savedData);
+        } else {
+          // If NO (it's a new day), initialize everyone as Present
+          const classStudents = students.filter(student => 
+            student.class === activeClass || 
+            student.grade === activeClass || 
+            student.className === activeClass
+          );
+          
+          setAttendanceList(classStudents.map(student => ({
+            ...student,
+            currentStatus: 'Present' 
+          })));
+        }
+      } catch (error) {
+        console.error("Failed to fetch today's attendance.");
+      }
+    };
+
+    fetchTodayAttendance();
   }, [students, activeClass]);
 
   const presentCount = attendanceList.filter(s => s.currentStatus === 'Present').length;
@@ -37,71 +67,71 @@ export default function AttendanceTracker({ students }) {
     ));
   };
 
-  const handleSaveAttendance = async () => {
+ const handleSaveAttendance = async () => {
     try {
-     await Promise.all(
-        attendanceList.map(async (student) => {
-          // REPLACE THE FETCH BLOCK WITH THIS:
-          await fetch(`http://localhost:5000/api/students/${student._id}/attendance`, {
-            method: 'PUT',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('teachbuddy_token')}`
-            },
-            body: JSON.stringify({ status: student.currentStatus })
-          });
-        })
-      );
-      alert(`Successfully saved attendance for Class ${activeClass}!`);
+      // Send ONE single bulk request to our new route!
+      const response = await fetch(`http://localhost:5000/api/attendance/${activeClass}/today`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('teachbuddy_token')}`
+        },
+        // We package the entire array of students into the digital envelope
+        body: JSON.stringify({ records: attendanceList })
+      });
+
+      if (response.ok) {
+        alert(`Successfully saved attendance for Class ${activeClass}!`);
+      } else {
+        alert("Failed to save to the server. Please try again.");
+      }
     } catch (error) {
       console.error("Error saving bulk attendance:", error);
-      alert("Failed to save attendance.");
+      alert("Network error. Failed to save attendance.");
     }
   };
-
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
       
       <div className="flex justify-between items-center mb-2 mt-2">
         <h2 className="font-bold text-slate-800">Today's Attendance</h2>
         <div className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg">
-          <Calendar className="w-3.5 h-3.5" /> 27 May
+          <Calendar className="w-3.5 h-3.5" /> {todayDate}
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* 🚀 THE NEW STICKY HEADER WRAPPER 🚀          */}
-      {/* bg-slate-50 matches your background, z-30 keeps it on top */}
-      {/* ========================================== */}
       <div className="sticky top-0 z-30 bg-[#f8fafc]/95 backdrop-blur-md pt-2 pb-3 mb-2 -mx-2 px-2 rounded-b-xl border-b border-transparent">
         
-        {/* CLASS SELECTOR */}
+        {/* 4. DYNAMIC BUTTON GENERATOR */}
         <div className="flex gap-2 overflow-x-auto pb-3 hide-scrollbar">
-          {['8A', '8B', '9A', '9B'].map((cls) => {
-            const isMyClass = cls === currentUser.classTeacherOf;
-            const isActive = activeClass === cls;
-            
-            return (
-              <button 
-                key={cls}
-                onClick={() => setActiveClass(cls)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-sm border ${
-                  isActive 
-                    ? isMyClass 
-                      ? 'bg-blue-600 border-blue-600 text-white' 
-                      : 'bg-slate-800 border-slate-800 text-white' 
-                    : isMyClass 
-                      ? 'bg-white border-blue-600 text-blue-600 hover:bg-blue-50' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' 
-                }`}
-              >
-                Class {cls}
-              </button>
-            );
-          })}
+          {myClasses.length > 0 ? (
+            myClasses.map((cls) => {
+              const isMyClass = cls === currentUser?.classTeacherOf;
+              const isActive = activeClass === cls;
+              
+              return (
+                <button 
+                  key={cls}
+                  onClick={() => setActiveClass(cls)}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-sm border ${
+                    isActive 
+                      ? isMyClass 
+                        ? 'bg-blue-600 border-blue-600 text-white' 
+                        : 'bg-slate-800 border-slate-800 text-white' 
+                      : isMyClass 
+                        ? 'bg-white border-blue-600 text-blue-600 hover:bg-blue-50' 
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' 
+                  }`}
+                >
+                  Class {cls}
+                </button>
+              );
+            })
+          ) : (
+             <span className="text-sm font-medium text-slate-500">No classes assigned.</span>
+          )}
         </div>
 
-        {/* READ-ONLY WARNING MESSAGE */}
         {!isClassTeacher && attendanceList.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl mb-3 flex gap-3 items-center">
             <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
@@ -111,7 +141,6 @@ export default function AttendanceTracker({ students }) {
           </div>
         )}
 
-        {/* LIVE SUMMARY DASHBOARD */}
         {attendanceList.length > 0 && (
           <div className="flex gap-3">
             <div className="flex-1 bg-emerald-50 border border-emerald-100 p-3 rounded-2xl flex flex-col justify-center items-center shadow-sm">
@@ -129,9 +158,6 @@ export default function AttendanceTracker({ students }) {
           </div>
         )}
       </div>
-      {/* ========================================== */}
-      {/* END STICKY WRAPPER                           */}
-      {/* ========================================== */}
 
       <div className="space-y-3 mb-6 relative z-10">
         {attendanceList.length > 0 ? (
